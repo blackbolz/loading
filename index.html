@@ -161,16 +161,18 @@
       display: flex;
       align-items: center;
       gap: 8px;
-      font-size: 11px;
+      font-size: 14px;
     }
     .ca-label {
       font-weight: bold;
       color: #000;
+      font-size: 14px;
     }
     .ca-text {
       flex: 1;
       color: #555;
       font-family: 'Courier New', monospace;
+      font-size: 14px;
     }
 
     /* ------ RESPONSIVE ------ */
@@ -189,7 +191,7 @@
   </div>
 
   <!-- Audio -->
-  <audio id="backgroundSound" preload="auto">
+  <audio id="backgroundSound" preload="auto" loop>
     <source src="images/sound.mp4" type="audio/mp4">
     <source src="images/sound.mp3" type="audio/mpeg">
     Your browser does not support the audio element.
@@ -529,32 +531,38 @@
 
     // Copy CA text function
     function copyCAText() {
-      const caText = document.getElementById('caText').textContent;
-      navigator.clipboard.writeText(caText).then(function() {
-        // Show temporary feedback
-        const btn = document.querySelector('[data-action="copyCA"]');
-        const originalText = btn.textContent;
-        btn.textContent = 'Copied!';
-        setTimeout(function() {
-          btn.textContent = originalText;
-        }, 1000);
-      }).catch(function(err) {
-        console.log('Copy failed:', err);
-        // Fallback for older browsers
-        const textArea = document.createElement('textarea');
-        textArea.value = caText;
-        document.body.appendChild(textArea);
-        textArea.select();
+      const textToCopy = 'coming soon';
+      
+      // Create a temporary textarea element
+      const textArea = document.createElement('textarea');
+      textArea.value = textToCopy;
+      textArea.style.position = 'fixed';
+      textArea.style.opacity = '0';
+      textArea.style.left = '-999px';
+      textArea.style.top = '-999px';
+      
+      // Add to DOM, select, copy, then remove
+      document.body.appendChild(textArea);
+      textArea.select();
+      textArea.setSelectionRange(0, 99999); // For mobile devices
+      
+      try {
         document.execCommand('copy');
-        document.body.removeChild(textArea);
-        
+        // Show feedback
         const btn = document.querySelector('[data-action="copyCA"]');
         const originalText = btn.textContent;
         btn.textContent = 'Copied!';
+        btn.style.background = '#00ff00';
         setTimeout(function() {
           btn.textContent = originalText;
+          btn.style.background = '';
         }, 1000);
-      });
+      } catch (err) {
+        alert('Copy failed. Text to copy: ' + textToCopy);
+      }
+      
+      // Clean up
+      document.body.removeChild(textArea);
     }
  
     // Loading status messages
@@ -644,22 +652,9 @@
       const loadingScreen = document.getElementById('loadingScreen');
       const backgroundSound = document.getElementById('backgroundSound');
       
-      // Play sound after 3 seconds
+      // Start sound after 3 seconds from page load (including loading screen time)
       setTimeout(function() {
-        try {
-          backgroundSound.play().catch(function(error) {
-            console.log('Audio play failed:', error);
-            // Fallback: try to play after user interaction
-            document.addEventListener('click', function playAudio() {
-              backgroundSound.play().catch(function(e) {
-                console.log('Audio play failed on click:', e);
-              });
-              document.removeEventListener('click', playAudio);
-            });
-          });
-        } catch (error) {
-          console.log('Audio error:', error);
-        }
+        backgroundSound.play();
       }, 3000);
       
       // Show loading screen for 4 seconds
