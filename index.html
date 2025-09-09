@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>$Loading Desktop</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=MS+Sans+Serif:wght@400;700&display=swap');
+ 
+    /* ------ RESET ------ */
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    :root{
+      --win-blue-1:#0080ff; --win-blue-2:#0040c0; --win-gray:#c0c0c0; --win-dark:#808080; --win-light:#ffffff;
+      --taskbar-h:40px; --accent:#00ff90; --error:#ff3b30; --ok:#00c853; --warning:#ffc400; --teal1:#008080; --teal2:#0080c0;
+    }
+ 
+    body{
+      font-family:'MS Sans Serif', system-ui, -apple-system, Segoe UI, Arial, sans-serif;
+      font-size:11px; line-height:1.35;
+      height:100vh; overflow:hidden; user-select:none; cursor: wait;
+      background: url('images/background.png') no-repeat center center fixed;
+      background-size: cover;
+    }
+ 
+    /* ------ DESKTOP BG & GRID ------ */
+    .desktop{
+      width:100%; height:100vh; position:relative; padding-bottom:var(--taskbar-h);
+      background-image: repeating-linear-gradient(45deg, transparent, transparent 2px, rgba(255,255,255,.08) 2px, rgba(255,255,255,.08) 4px);
+    }
+ 
+    /* ------ TASKBAR ------ */
+    .taskbar{
+      position:fixed; left:0; right:0; bottom:0; height:var(--taskbar-h);
+      background: linear-gradient(180deg, var(--win-gray), var(--win-dark));
+      border-top:2px solid var(--win-light);
+      display:flex; align-items:center; gap:6px; padding:4px; z-index:1000;
+    }
+    .start-button{
+      background: linear-gradient(180deg, var(--win-gray), var(--win-dark));
+      border:2px outset var(--win-gray); padding:4px 14px; font-weight:bold; cursor:pointer; font-size:11px;
+    }
+    .start-button:active{ border:2px inset var(--win-gray); }
+ 
+    .taskbar-apps{ display:flex; gap:6px; overflow-x:auto; flex:1; }
+    .task-btn{
+      min-width:120px; max-width:200px; padding:4px 8px; background:linear-gradient(180deg, var(--win-gray), #a0a0a0);
+      border:2px outset var(--win-gray); cursor:pointer; white-space:nowrap; text-overflow:ellipsis; overflow:hidden;
+    }
+    .task-btn.active{ outline:2px solid var(--win-blue-1); }
+ 
+    .tray{ margin-left:auto; display:flex; align-items:center; gap:8px; }
+    .tray .pill{ background:linear-gradient(180deg, var(--win-gray), #a0a0a0); border:1px inset var(--win-gray); padding:3px 8px; font-size:10px; }
+ 
+    /* ------ ICONS ------ */
+    .desktop-icon{ position:absolute; width:84px; text-align:center; cursor:default; padding:6px; border-radius:2px; transition:background .15s; }
+    .desktop-icon:hover{ background:rgba(0,0,255,.35); color:#fff; }
+    .desktop-icon img, .icon-box{ width:32px; height:32px; margin:0 auto 3px; border:1px solid #000; display:flex; align-items:center; justify-content:center; background:#fff; }
+    .icon-title{ word-break:break-word; }
+ 
+    .icon-loading{ top:20px; left:20px; }
+    .icon-chart{ top:20px; left:120px; }
+    .icon-whitepaper{ top:20px; left:220px; }
+    .icon-buy{ top:120px; left:20px; }
+    .icon-x{ top:220px; left:20px; }
+    .icon-dexscreener{ top:320px; left:20px; }
+ 
+    /* ------ WINDOWS ------ */
+    .window{ position:absolute; background:var(--win-gray); border:2px outset var(--win-gray); min-width:380px; min-height:220px; display:none; z-index:100; resize:both; overflow:hidden; }
+    .window.active{ display:block; }
+ 
+    .window-header{
+      background:linear-gradient(90deg, var(--win-blue-1), var(--win-blue-2)); color:#fff; padding:2px 4px; display:flex; align-items:center; justify-content:space-between; font-weight:bold; cursor:move;
+    }
+    .window-title{ display:flex; align-items:center; gap:4px; }
+    .window-icon{ width:16px; height:16px; display:flex; align-items:center; justify-content:center; background:#ffffaa; color:#000; border:1px solid #000; font-size:12px; }
+    .window-controls{ display:flex; gap:2px; }
+    .window-button{ width:16px; height:14px; background:var(--win-gray); border:1px outset var(--win-gray); display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:bold; cursor:pointer; }
+    .window-button:active{ border:1px inset var(--win-gray); }
+    .window-content{ padding:10px; height:calc(100% - 22px); overflow:auto; background:#f3f3f3; }
+ 
+    /* ------ PROGRESS ------ */
+    .progress-container{ border:2px inset var(--win-gray); height:20px; margin:14px 0; background:#fff; position:relative; overflow:hidden; }
+    .progress-bar{ height:100%; background:linear-gradient(90deg, var(--win-blue-1), var(--win-blue-2)); width:0%; animation:windowsLoad 6s ease-in-out infinite; }
+    @keyframes windowsLoad{ 0%{width:0%} 50%{width:72%} 100%{width:100%} }
+ 
+    /* ------ CHART ------ */
+    .chart-stats{ font-size:10px; color:#555; display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-top:8px; }
+ 
+    /* ------ DIALOG BUTTONS ------ */
+    .dialog-buttons{ display:flex; gap:6px; justify-content:center; margin-top:12px; flex-wrap:wrap; }
+    .dialog-button{ background:var(--win-gray); border:2px outset var(--win-gray); padding:4px 14px; cursor:pointer; font-size:11px; }
+    .dialog-button:active{ border:2px inset var(--win-gray); }
+ 
+    /* ------ ERROR & NOTIFICATION ------ */
+    .error-icon{ font-size:28px; color:var(--error); margin-right:10px; }
+    .notification{ position:fixed; bottom:calc(var(--taskbar-h) + 6px); right:10px; background:#ffffcc; border:2px outset var(--win-gray); padding:10px; max-width:320px; display:none; z-index:1100; }
+    .notification.active{ display:block; }
+ 
+    /* ------ START MENU ------ */
+    .start-menu{ position:fixed; bottom:calc(var(--taskbar-h) - 2px); left:4px; width:210px; background:var(--win-gray); border:2px outset var(--win-gray); display:none; z-index:1100; }
+    .start-menu.active{ display:block; }
+    .start-menu-item{ padding:6px 8px; cursor:pointer; font-size:11px; border-bottom:1px solid var(--win-dark); display:flex; align-items:center; gap:6px; }
+    .start-menu-item:hover{ background:var(--win-blue-1); color:#fff; }
+ 
+    /* ------ BSOD ------ */
+    .bsod{ position:fixed; inset:0; background:#0000aa; color:#fff; font-family:'Courier New', monospace; padding:20px; display:none; z-index:1200; font-size:14px; line-height:1.45; }
+    .bsod.active{ display:block; }
+ 
+    /* ------ CONTEXT MENU ------ */
+    .ctx{ position:fixed; background:#fefefe; border:2px outset var(--win-gray); display:none; z-index:1200; min-width:160px; }
+    .ctx-item{ padding:6px 10px; border-bottom:1px solid #ddd; cursor:pointer; }
+    .ctx-item:hover{ background:#0080ff; color:#fff; }
+ 
+    /* ------ LOADING SCREEN ------ */
+    .loading-screen{
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: #000000;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 9999;
+      transition: opacity 0.5s ease-out;
+    }
+    .loading-screen.fade-out{
+      opacity: 0;
+      pointer-events: none;
+    }
+    .loading-gif{
+      max-width: 200px;
+      max-height: 200px;
+      margin-bottom: 20px;
+    }
+    .loading-text{
+      color: #ffffff;
+      font-family: 'MS Sans Serif', system-ui, -apple-system, Segoe UI, Arial, sans-serif;
+      font-size: 18px;
+      font-weight: bold;
+      letter-spacing: 2px;
+    }
+
+    /* ------ CURSOR STATES ------ */
+    .clicking {
+      cursor: default !important;
+    }
+    
+    * {
+      cursor: inherit;
+    }
+
+    /* ------ CA BOX ------ */
+    .ca-container {
+      margin-top: 12px;
+      padding: 8px;
+      border: 2px inset var(--win-gray);
+      background: #ffffff;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 11px;
+    }
+    .ca-label {
+      font-weight: bold;
+      color: #000;
+    }
+    .ca-text {
+      flex: 1;
+      color: #555;
+      font-family: 'Courier New', monospace;
+    }
+
+    /* ------ RESPONSIVE ------ */
+    @media (max-width: 768px){
+      .window{ min-width:92%; left:4% !important; top:8% !important; }
+      .desktop-icon{ position:relative; display:inline-block; margin:10px; }
+      .taskbar{ font-size:10px; }
+    }
+  </style>
+</head>
+<body>
+  <!-- Loading Screen -->
+  <div class="loading-screen" id="loadingScreen">
+    <img src="images/loading.gif" alt="Loading..." class="loading-gif">
+    <div class="loading-text">PLEASE WAIT</div>
+  </div>
+
+  <!-- Audio -->
+  <audio id="backgroundSound" preload="auto">
+    <source src="images/sound.mp4" type="audio/mp4">
+    <source src="images/sound.mp3" type="audio/mpeg">
+    Your browser does not support the audio element.
+  </audio>
+  <div class="desktop" id="desktop">
+    <!-- Desktop Icons (double‑click to open) -->
+    <div class="desktop-icon icon-loading" data-open="loading-window" tabindex="0">
+      <img src="images/loading.gif" alt="Loading Icon" class="icon-box" style="background:#ffff00">
+      <div class="icon-title">$Loading</div>
+    </div>
+
+    <div class="desktop-icon icon-chart" data-open="chart-window" tabindex="0">
+      <img src="images/chart.png" alt="Chart Icon" class="icon-box" style="background:#ffffff">
+      <div class="icon-title">Price Chart</div>
+    </div>
+
+    <div class="desktop-icon icon-whitepaper" data-open="about-window" tabindex="0">
+      <img src="images/whitepaper-icon.png" alt="Whitepaper Icon" class="icon-box" style="background:#ffffff">
+      <div class="icon-title">Whitepaper</div>
+    </div>
+
+    <div class="desktop-icon icon-buy" data-action="buy-link" tabindex="0">
+      <img src="images/pump.png" alt="Buy Icon" class="icon-box" style="background:#ff8000">
+      <div class="icon-title">Buy $Loading</div>
+    </div>
+
+    <div class="desktop-icon icon-x" data-action="x-link" tabindex="0">
+      <img src="images/x.png" alt="X Icon" class="icon-box" style="background:#f70202">
+      <div class="icon-title">X</div>
+    </div>
+
+    <div class="desktop-icon icon-dexscreener" data-action="dexscreener-link" tabindex="0">
+      <img src="images/dex.png" alt="Dexscreener Icon" class="icon-box" style="background:#4CAF50">
+      <div class="icon-title">Dexscreener</div>
+    </div>
+ 
+    <!-- Loading Progress Window -->
+    <div class="window loading-window active" data-title="$Loading Progress" style="top:110px; left:200px; width:440px; height:220px;">
+      <div class="window-header">
+        <div class="window-title"><img src="images/loading-icon.png" alt="Loading Icon" class="window-icon">$Loading Progress</div>
+        <div class="window-controls">
+          <div class="window-button" data-min="loading-window">_</div>
+          <div class="window-button" data-close="loading-window">×</div>
+        </div>
+      </div>
+      <div class="window-content">
+        <div class="progress-text" id="loadingStatus">Initializing blockchain connection...</div>
+        <div class="progress-container"><div class="progress-bar"></div></div>
+        <div class="dialog-buttons">
+          <button class="dialog-button" data-action="reset">Load</button>
+          <button class="dialog-button" data-open="about-window">About</button>
+        </div>
+        <div class="ca-container">
+          <span class="ca-label">ca:</span>
+          <span class="ca-text" id="caText">coming soon</span>
+          <button class="dialog-button" data-action="copyCA">Copy</button>
+        </div>
+      </div>
+    </div>
+ 
+    <!-- About Window -->
+    <div class="window about-window" data-title="About $Loading" style="top:160px; left:320px; width:520px; height:360px;">
+      <div class="window-header">
+        <div class="window-title"><img src="images/whitepaper-icon.png" alt="Whitepaper Icon" class="window-icon" style="background:#ffffff;">About $Loading</div>
+        <div class="window-controls">
+          <div class="window-button" data-min="about-window">_</div>
+          <div class="window-button" data-close="about-window">×</div>
+        </div>
+      </div>
+      <div class="window-content" style="display:grid; place-items:start; gap:8px;">
+        <div style="width:100%; text-align:center;">
+          <div style="font-size:48px; font-weight:700; color:var(--win-blue-1); text-shadow:2px 2px 4px #808080;">$LOADING</div>
+          <div style="margin-top:6px;"><strong>The Token That's Always Loading</strong></div>
+        </div>
+        <div class="about-info" style="width:100%;">
+          <strong>Version:</strong> 1.0.0 &nbsp; | &nbsp; <strong>Chain:</strong> Solana &nbsp; | &nbsp; <strong>Total Supply:</strong> 1,000,000,000 &nbsp; | &nbsp; <strong>Status:</strong> Currently Loading...
+          <br><br>
+          $Loading represents the endless potential of progress. Like classic loading bars that build anticipation, our token embodies continuous growth and development.
+          <br><br>
+          <strong>Features:</strong>
+          <ul style="margin-left:18px; margin-top:4px;">
+            <li>Always in progress</li>
+            <li>Community‑driven development</li>
+            <li>Transparent tokenomics</li>
+            <li>Regular updates and improvements</li>
+          </ul>
+          <div class="dialog-buttons">
+            <button class="dialog-button" data-close="about-window">OK</button>
+            <button class="dialog-button" data-open="error-dialog">More Info</button>
+          </div>
+        </div>
+      </div>
+    </div>
+ 
+    <!-- Chart Window -->
+    <div class="window chart-window" data-title="$Loading Price Chart" style="top:80px; left:540px; width:560px; height:420px;">
+      <div class="window-header">
+        <div class="window-title"><img src="images/chart-icon.png" alt="Chart Icon" class="window-icon" style="background:#b7ffb7;">$Loading Price Chart</div>
+        <div class="window-controls">
+          <div class="window-button" data-min="chart-window">_</div>
+          <div class="window-button" data-close="chart-window">×</div>
+        </div>
+      </div>
+      <div class="window-content">
+        <canvas id="priceCanvas" width="520" height="240" style="background:#fff; border:2px inset var(--win-gray);"></canvas>
+        <div class="chart-stats">
+          <div><strong>Price:</strong> <span id="statPrice">Loading...</span></div>
+          <div><strong>24h:</strong> <span id="statChange">Loading...</span></div>
+          <div><strong>MCAP:</strong> <span id="statCap">Loading...</span></div>
+        </div>
+        <div class="dialog-buttons">
+          <button class="dialog-button" data-action="refreshChart">Refresh (F5)</button>
+          <button class="dialog-button" data-action="openBSOD">Advanced</button>
+        </div>
+      </div>
+    </div>
+ 
+    <!-- Error Dialog -->
+    <div class="window error-dialog" data-title="$Loading Error" style="top:200px; left:460px; width:380px; height:170px;">
+      <div class="window-header">
+        <div class="window-title"><img src="images/error-icon.png" alt="Error Icon" class="window-icon" style="background:#ffaaaa;">$Loading Error</div>
+        <div class="window-controls">
+          <div class="window-button" data-close="error-dialog">×</div>
+        </div>
+      </div>
+      <div class="window-content">
+        <div style="display:flex; align-items:center; margin:10px 0;">
+          <img src="images/warning-icon.png" alt="Warning Icon" class="error-icon">
+          <div>
+            Loading has encountered an error and needs to restart.<br><br>
+            Error Code: 0x$LOADING &nbsp; | &nbsp; Status: Still Loading...
+          </div>
+        </div>
+        <div class="dialog-buttons">
+          <button class="dialog-button" data-action="reset">Retry</button>
+          <button class="dialog-button" data-close="error-dialog">Ignore</button>
+        </div>
+      </div>
+    </div>
+ 
+    <!-- Blue Screen of Death -->
+    <div class="bsod" id="bsod">
+      <div style="text-align:center; margin-bottom:28px;">
+        <div style="font-size:22px; margin-bottom:10px;">$LOADING HAS STOPPED</div>
+        <div>A problem has been detected and $Loading has been loading to prevent damage to your portfolio.</div>
+      </div>
+      LOADING_EXCEPTION_NOT_HANDLED<br><br>
+      If this is the first time you've seen this loading screen, restart your browser. If this screen appears again, follow these steps:<br><br>
+      Check to make sure any new tokens are properly configured. If this is a new installation, ask your crypto advisor or DeFi developer for any $Loading updates you might need.<br><br>
+      If problems continue, disable or remove any recently installed paperhands. Disable FOMO options such as instant buying or emotional trading. If you need to use Safe Mode to remove or disable components, restart your portfolio, press F8 to select Advanced Startup Options, and then select Safe Mode.<br><br>
+      Technical information:<br><br>
+      *** STOP: 0x$LOADING001 (0x$L0AD1NG,0x$T0KEN,0x$M00N,0x$PR0F1T)
+      <div style="margin-top:24px;">Beginning loading of $Loading tokens...<br>Progress: ████████████████████████░░░░░░░░ 75%</div>
+      <div style="margin-top:24px; text-align:center;">
+        <button class="dialog-button" id="btnContinue">Continue Loading (Esc)</button>
+      </div>
+    </div>
+ 
+    <!-- Notification -->
+    <div class="notification" id="notify">
+      <div style="display:flex; align-items:center; gap:6px; margin-bottom:5px;">
+        <img src="images/buy-icon.png" alt="Buy Icon" style="width:16px; height:16px;"><strong>$Loading Purchase</strong>
+      </div>
+      <div style="font-size:10px;">Loading purchase options... Please wait while we connect to DEX...</div>
+      <div class="dialog-buttons" style="margin-top:8px;">
+        <button class="dialog-button" data-action="fakeLink" data-url="#pumpfun">PumpFun</button>
+        <button class="dialog-button" data-action="fakeLink" data-url="#dexscreener">Dexscreener</button>
+        <button class="dialog-button" data-action="fakeLink" data-url="#x">X / Twitter</button>
+      </div>
+    </div>
+ 
+    <!-- Start Menu -->
+    <div class="start-menu" id="startMenu">
+      <div class="start-menu-item" data-open="loading-window"><img src="images/loading-icon.png" alt="Loading" style="width:12px; height:12px;"> $Loading Token</div>
+      <div class="start-menu-item" data-open="chart-window"><img src="images/chart-icon.png" alt="Chart" style="width:12px; height:12px;"> Price Chart</div>
+      <div class="start-menu-item" data-open="about-window"><img src="images/whitepaper-icon.png" alt="Whitepaper" style="width:12px; height:12px;"> Whitepaper</div>
+      <div style="border-top:2px inset var(--win-gray);"></div>
+      <div class="start-menu-item" data-action="buy-link"><img src="images/buy-icon.png" alt="Buy" style="width:12px; height:12px;"> Buy $Loading</div>
+      <div class="start-menu-item" data-action="openBSOD"><img src="images/tools-icon.png" alt="Tools" style="width:12px; height:12px;"> Troubleshoot</div>
+      <div class="start-menu-item" data-action="reset"><img src="images/restart-icon.png" alt="Load" style="width:12px; height:12px;"> Load</div>
+    </div>
+  </div>
+ 
+  <!-- Taskbar -->
+  <div class="taskbar">
+    <div class="start-button" id="startBtn">Start</div>
+    <div class="taskbar-apps" id="taskApps"></div>
+    <div class="tray">
+      <div class="pill" id="taskbar-time" title="">12:00</div>
+    </div>
+  </div>
+ 
+  <!-- Context Menu -->
+  <div class="ctx" id="ctx">
+    <div class="ctx-item" data-action="refreshIcons">Refresh</div>
+    <div class="ctx-item" data-open="about-window">Properties</div>
+    <div class="ctx-item" data-action="openBSOD">Troubleshoot</div>
+  </div>
+ 
+  <script>
+    // ---------- UTIL ----------
+    const $ = (q, sc=document) => sc.querySelector(q);
+    const $$ = (q, sc=document) => Array.from(sc.querySelectorAll(q));
+ 
+    // ---------- TIME ----------
+    function updateTime(){
+      const now = new Date();
+      const opts = {hour:'2-digit', minute:'2-digit'};
+      const t = now.toLocaleTimeString([], opts);
+      $('#taskbar-time').textContent = t;
+      $('#taskbar-time').title = now.toLocaleString();
+    }
+    setInterval(updateTime, 1000); updateTime();
+ 
+    // ---------- START MENU ----------
+    const startBtn = $('#startBtn');
+    const startMenu = $('#startMenu');
+    startBtn.addEventListener('click', (e)=>{ e.stopPropagation(); startMenu.classList.toggle('active'); });
+ 
+    document.addEventListener('click', (e)=>{
+      if(!startMenu.contains(e.target) && e.target !== startBtn) startMenu.classList.remove('active');
+      $('#ctx').style.display = 'none';
+    });
+ 
+    // ---------- WINDOWS MANAGER ----------
+    let zTop = 200; // base z for active
+ 
+    function openWindow(id){
+      const win = document.querySelector('.'+id);
+      if(!win) return; win.style.display = 'block'; win.classList.add('active');
+      bringToFront(win);
+      ensureTaskButton(id, win.dataset.title || id);
+    }
+ 
+    function closeWindow(id){
+      const win = document.querySelector('.'+id);
+      if(!win) return; win.classList.remove('active'); win.style.display='none';
+      removeTaskButton(id);
+    }
+ 
+    function minimizeWindow(id){
+      const win = document.querySelector('.'+id);
+      if(!win) return; win.classList.toggle('active');
+      if(win.classList.contains('active')){
+        win.style.display='block'; bringToFront(win);
+      }else{ win.style.display='none'; }
+      toggleTaskHighlight(id, win.classList.contains('active'));
+    }
+ 
+    function bringToFront(win){
+      zTop += 1; win.style.zIndex = zTop;
+      const id = getWindowId(win);
+      toggleTaskHighlight(id, true);
+    }
+ 
+    function getWindowId(win){
+      return Array.from(win.classList).find(c => c.endsWith('-window') || c.endsWith('-dialog')) || '';
+    }
+ 
+    // Taskbar buttons
+    const taskApps = $('#taskApps');
+    function ensureTaskButton(id, title){
+      if(taskApps.querySelector(`[data-task="${id}"]`)) return;
+      const btn = document.createElement('div');
+      btn.className='task-btn active'; btn.dataset.task = id; btn.textContent = title;
+      btn.addEventListener('click', ()=> minimizeWindow(id));
+      taskApps.appendChild(btn);
+    }
+    function removeTaskButton(id){
+      const btn = taskApps.querySelector(`[data-task="${id}"]`); if(btn) btn.remove();
+    }
+    function toggleTaskHighlight(id, on){
+      const btn = taskApps.querySelector(`[data-task="${id}"]`);
+      if(btn){ btn.classList.toggle('active', on); }
+    }
+ 
+    // Header dragging (mouse + touch)
+    let drag = {win:null, dx:0, dy:0};
+    $$('.window-header').forEach(h=>{
+      const parent = h.parentElement;
+      function down(e){
+        drag.win = parent; const rect = parent.getBoundingClientRect();
+        const cx = (e.touches? e.touches[0].clientX : e.clientX);
+        const cy = (e.touches? e.touches[0].clientY : e.clientY);
+        drag.dx = cx - rect.left; drag.dy = cy - rect.top; bringToFront(parent);
+      }
+      h.addEventListener('mousedown', down);
+      h.addEventListener('touchstart', down, {passive:true});
+    });
+    function move(e){
+      if(!drag.win) return;
+      const cx = (e.touches? e.touches[0].clientX : e.clientX);
+      const cy = (e.touches? e.touches[0].clientY : e.clientY);
+      let x = cx - drag.dx; let y = cy - drag.dy;
+      // keep inside viewport
+      const maxX = window.innerWidth - 80; const maxY = window.innerHeight - 80 - parseInt(getComputedStyle(document.documentElement).getPropertyValue('--taskbar-h'));
+      x = Math.max(0, Math.min(x, maxX)); y = Math.max(0, Math.min(y, maxY));
+      // snap to 8px grid
+      drag.win.style.left = Math.round(x/8)*8 + 'px';
+      drag.win.style.top  = Math.round(y/8)*8 + 'px';
+    }
+    function up(){ drag.win = null; }
+    document.addEventListener('mousemove', move);
+    document.addEventListener('touchmove', move, {passive:false});
+    document.addEventListener('mouseup', up); document.addEventListener('touchend', up);
+ 
+    // Window controls
+    $$('[data-close]').forEach(b=> b.addEventListener('click', ()=> closeWindow(b.dataset.close)));
+    $$('[data-min]').forEach(b=> b.addEventListener('click', ()=> minimizeWindow(b.dataset.min)));
+ 
+    // Desktop icon interactions (double click to open)
+    $$('.desktop-icon').forEach(icon=>{
+      let clicks=0, timer=null;
+      const openId = icon.dataset.open;
+      const action = icon.dataset.action;
+      function handle(){ if(openId) openWindow(openId); if(action) doAction(action); }
+      icon.addEventListener('click', ()=>{ clicks++; if(clicks===1){ timer=setTimeout(()=>{ clicks=0; }, 250);} else { clearTimeout(timer); clicks=0; handle(); }});
+      icon.addEventListener('keydown', (e)=>{ if(e.key==='Enter'){ handle(); }});
+    });
+ 
+    // Start menu routing
+    $$('#startMenu [data-open]').forEach(i=> i.addEventListener('click', ()=>{ openWindow(i.dataset.open); startMenu.classList.remove('active'); }));
+    $$('#startMenu [data-action]').forEach(i=> i.addEventListener('click', ()=>{ doAction(i.dataset.action); startMenu.classList.remove('active'); }));
+ 
+    // Actions
+    function doAction(a){
+      if(a==='buy') showNotification();
+      if(a==='buy-link') window.open('https://pump.fun/board', '_blank');
+      if(a==='x-link') window.open('https://x.com', '_blank');
+      if(a==='dexscreener-link') window.open('https://dexscreener.com', '_blank');
+      if(a==='reset') resetLoading();
+      if(a==='openBSOD') openBSOD();
+      if(a==='refreshIcons') refreshIcons();
+      if(a==='refreshChart') refreshChart();
+      if(a==='copyCA') copyCAText();
+    }
+
+    // Copy CA text function
+    function copyCAText() {
+      const caText = document.getElementById('caText').textContent;
+      navigator.clipboard.writeText(caText).then(function() {
+        // Show temporary feedback
+        const btn = document.querySelector('[data-action="copyCA"]');
+        const originalText = btn.textContent;
+        btn.textContent = 'Copied!';
+        setTimeout(function() {
+          btn.textContent = originalText;
+        }, 1000);
+      }).catch(function(err) {
+        console.log('Copy failed:', err);
+        // Fallback for older browsers
+        const textArea = document.createElement('textarea');
+        textArea.value = caText;
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+        
+        const btn = document.querySelector('[data-action="copyCA"]');
+        const originalText = btn.textContent;
+        btn.textContent = 'Copied!';
+        setTimeout(function() {
+          btn.textContent = originalText;
+        }, 1000);
+      });
+    }
+ 
+    // Loading status messages
+    const loadingMessages = [
+      'Initializing blockchain connection...', 'Loading smart contract...', 'Connecting to Solana network...', 'Fetching token data...', 'Loading tokenomics...', 'Initializing trading pairs...', 'Loading community stats...', 'Preparing moon mission...', 'Loading complete! Ready to trade.', 'Error: Success overload detected.'
+    ];
+    let messageIndex = 0;
+    function updateLoadingStatus(){ $('#loadingStatus').textContent = loadingMessages[messageIndex]; messageIndex = (messageIndex + 1) % loadingMessages.length; }
+    setInterval(updateLoadingStatus, 1800); updateLoadingStatus();
+ 
+    function resetLoading(){
+      const bar = $('.progress-bar'); bar.style.animation='none'; setTimeout(()=>{ bar.style.animation='windowsLoad 6s ease-in-out infinite'; }, 50);
+      messageIndex = 0; updateLoadingStatus();
+    }
+ 
+    // Notification
+    const notify = $('#notify');
+    function showNotification(){ notify.classList.add('active'); setTimeout(()=> notify.classList.remove('active'), 4200); }
+    $$('[data-action="fakeLink"]').forEach(b=> b.addEventListener('click', ()=>{ b.textContent='Opening...'; setTimeout(()=>{ b.textContent='(Loading)'; }, 800); }));
+ 
+    // BSOD
+    function openBSOD(){ $('#bsod').classList.add('active'); document.body.classList.add('loading-cursor'); }
+    function closeBSOD(){ $('#bsod').classList.remove('active'); document.body.classList.remove('loading-cursor'); }
+    $('#btnContinue').addEventListener('click', closeBSOD);
+ 
+    // Keyboard shortcuts
+    document.addEventListener('keydown', (e)=>{
+      if(e.key==='Escape') closeBSOD();
+      if(e.key==='F1'){ e.preventDefault(); openWindow('about-window'); }
+      if(e.key==='F5'){ e.preventDefault(); refreshChart(); }
+      // Windows key toggles Start (metaKey cannot be captured reliably cross-browser; Alt+S fallback)
+      if(e.altKey && e.key.toLowerCase()==='s'){ startMenu.classList.toggle('active'); }
+    });
+ 
+    // Context menu on desktop
+    const ctx = $('#ctx');
+    $('#desktop').addEventListener('contextmenu', (e)=>{
+      e.preventDefault(); ctx.style.display='block'; ctx.style.left=e.clientX+'px'; ctx.style.top=e.clientY+'px';
+    });
+    $$('#ctx .ctx-item').forEach(i=> i.addEventListener('click', ()=>{ doAction(i.dataset.action || ''); const open = i.dataset.open; if(open) openWindow(open); ctx.style.display='none'; }));
+ 
+    function refreshIcons(){
+      // silly wiggle to imply refresh
+      $$('.desktop-icon').forEach(el=>{ el.animate([{transform:'translateY(0)'},{transform:'translateY(-3px)'},{transform:'translateY(0)'}], {duration:250}); });
+    }
+ 
+    // ---------- CHART (fake random walk) ----------
+    const canvas = $('#priceCanvas'); const ctx2 = canvas.getContext('2d');
+    let priceSeries = [];
+    function genSeries(n=120){
+      priceSeries = []; let p = 1.0; for(let i=0;i<n;i++){ const drift = 0.001 + Math.random()*0.006; const shock = (Math.random()-.5)*0.03; p = Math.max(0.2, p*(1+drift+shock)); priceSeries.push(p); }
+    }
+    function drawChart(){
+      const w = canvas.width, h = canvas.height; ctx2.clearRect(0,0,w,h);
+      // grid
+      ctx2.globalAlpha = .3; ctx2.strokeStyle = '#ddd'; for(let x=0;x<w;x+=52){ ctx2.beginPath(); ctx2.moveTo(x,0); ctx2.lineTo(x,h); ctx2.stroke(); }
+      for(let y=0;y<h;y+=40){ ctx2.beginPath(); ctx2.moveTo(0,y); ctx2.lineTo(w,y); ctx2.stroke(); }
+      ctx2.globalAlpha = 1;
+      // axis
+      ctx2.strokeStyle = '#000'; ctx2.lineWidth = 1; ctx2.strokeRect(0.5,0.5,w-1,h-1);
+      // line
+      const max = Math.max(...priceSeries), min = Math.min(...priceSeries);
+      const sx = (i)=> i*(w/(priceSeries.length-1));
+      const sy = (v)=> h - ( (v-min)/(max-min+1e-6) * (h-10) ) - 5;
+      ctx2.lineWidth = 2; ctx2.beginPath();
+      priceSeries.forEach((v,i)=>{ const x=sx(i), y=sy(v); if(i===0) ctx2.moveTo(x,y); else ctx2.lineTo(x,y); });
+      ctx2.strokeStyle = '#008000'; ctx2.stroke();
+      // fill under
+      ctx2.lineTo(w-1,h-1); ctx2.lineTo(0,h-1); ctx2.closePath(); ctx2.globalAlpha=.08; ctx2.fillStyle='#00ff00'; ctx2.fill(); ctx2.globalAlpha=1;
+    }
+    function updateStats(){
+      const last = priceSeries[priceSeries.length-1];
+      const first = priceSeries[0];
+      const ch = ((last/first)-1)*100; const mcap = (last*42_000_000).toFixed(0);
+      $('#statPrice').textContent = '$' + last.toFixed(4);
+      $('#statChange').textContent = (ch>=0?'+':'') + ch.toFixed(2) + '%';
+      $('#statChange').style.color = ch>=0 ? '#007a00' : '#b00020';
+      $('#statCap').textContent = '$' + Number(mcap).toLocaleString();
+    }
+    function refreshChart(){ genSeries(); drawChart(); updateStats(); }
+ 
+    // initial chart
+    refreshChart();
+
+    // ---------- LOADING SCREEN ----------
+    window.addEventListener('load', function() {
+      const loadingScreen = document.getElementById('loadingScreen');
+      const backgroundSound = document.getElementById('backgroundSound');
+      
+      // Play sound after 3 seconds
+      setTimeout(function() {
+        try {
+          backgroundSound.play().catch(function(error) {
+            console.log('Audio play failed:', error);
+            // Fallback: try to play after user interaction
+            document.addEventListener('click', function playAudio() {
+              backgroundSound.play().catch(function(e) {
+                console.log('Audio play failed on click:', e);
+              });
+              document.removeEventListener('click', playAudio);
+            });
+          });
+        } catch (error) {
+          console.log('Audio error:', error);
+        }
+      }, 3000);
+      
+      // Show loading screen for 4 seconds
+      setTimeout(function() {
+        loadingScreen.classList.add('fade-out');
+        
+        // Remove from DOM after fade animation completes
+        setTimeout(function() {
+          loadingScreen.style.display = 'none';
+        }, 500);
+      }, 4000);
+    });
+
+    // ---------- CURSOR MANAGEMENT ----------
+    document.addEventListener('mousedown', function() {
+      document.body.classList.add('clicking');
+    });
+    
+    document.addEventListener('mouseup', function() {
+      setTimeout(function() {
+        document.body.classList.remove('clicking');
+      }, 100);
+    });
+    
+    // Also handle touch events for mobile
+    document.addEventListener('touchstart', function() {
+      document.body.classList.add('clicking');
+    });
+    
+    document.addEventListener('touchend', function() {
+      setTimeout(function() {
+        document.body.classList.remove('clicking');
+      }, 100);
+    });
+ 
+    // ---------- DATA-ATTR ROUTING FOR BUTTONS ----------
+    $$('[data-open]').forEach(b=> b.addEventListener('click', ()=> openWindow(b.dataset.open)));
+    $$('[data-action="reset"]').forEach(b=> b.addEventListener('click', resetLoading));
+    $$('[data-action="openBSOD"]').forEach(b=> b.addEventListener('click', openBSOD));
+ 
+    // ---------- MINIMIZE/RESTORE WHEN CLICKING WINDOW AREA ----------
+    $$('.window').forEach(win=>{
+      win.addEventListener('mousedown', ()=> bringToFront(win));
+    });
+ 
+    // Open default active windows in taskbar
+    ['loading-window'].forEach(id=> ensureTaskButton(id, document.querySelector('.'+id).dataset.title));
+  </script>
+</body>
+</html>
