@@ -18,7 +18,7 @@
       font-family:'MS Sans Serif', system-ui, -apple-system, Segoe UI, Arial, sans-serif;
       font-size:11px; line-height:1.35;
       height:100vh; overflow:hidden; user-select:none; cursor: wait;
-      background: url('images/background.png') no-repeat center center fixed;
+      background: url('images/Background.png') no-repeat center center fixed;
       background-size: cover;
     }
  
@@ -152,8 +152,9 @@
       cursor: inherit;
     }
 
-    /* ------ CA BOX ------ */
-    .ca-container {
+
+    /* ------ ADDRESS BOX ------ */
+    .address-box {
       margin-top: 12px;
       padding: 8px;
       border: 2px inset var(--win-gray);
@@ -163,16 +164,33 @@
       gap: 8px;
       font-size: 14px;
     }
-    .ca-label {
-      font-weight: bold;
-      color: #000;
-      font-size: 14px;
-    }
-    .ca-text {
+    .address-text {
       flex: 1;
       color: #555;
       font-family: 'Courier New', monospace;
       font-size: 14px;
+      background: #f0f0f0;
+      border: 1px inset var(--win-gray);
+      padding: 4px 6px;
+      min-height: 20px;
+      display: flex;
+      align-items: center;
+    }
+    .copy-btn {
+      background: var(--win-gray);
+      border: 2px outset var(--win-gray);
+      padding: 4px 14px;
+      cursor: pointer;
+      font-size: 11px;
+      font-family: 'MS Sans Serif', system-ui, -apple-system, Segoe UI, Arial, sans-serif;
+      min-width: 60px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .copy-btn:active {
+      border: 2px inset var(--win-gray);
     }
 
     /* ------ RESPONSIVE ------ */
@@ -190,12 +208,6 @@
     <div class="loading-text">PLEASE WAIT</div>
   </div>
 
-  <!-- Audio -->
-  <audio id="backgroundSound" preload="auto" loop>
-    <source src="images/sound.mp4" type="audio/mp4">
-    <source src="images/sound.mp3" type="audio/mpeg">
-    Your browser does not support the audio element.
-  </audio>
   <div class="desktop" id="desktop">
     <!-- Desktop Icons (double‑click to open) -->
     <div class="desktop-icon icon-loading" data-open="loading-window" tabindex="0">
@@ -244,10 +256,9 @@
           <button class="dialog-button" data-action="reset">Load</button>
           <button class="dialog-button" data-open="about-window">About</button>
         </div>
-        <div class="ca-container">
-          <span class="ca-label">ca:</span>
-          <span class="ca-text" id="caText">coming soon</span>
-          <button class="dialog-button" data-action="copyCA">Copy</button>
+        <div class="address-box">
+          <div class="address-text" id="walletAddress">CA coming soon</div>
+          <button class="copy-btn" onclick="copyToClipboard()">Copy</button>
         </div>
       </div>
     </div>
@@ -526,44 +537,8 @@
       if(a==='openBSOD') openBSOD();
       if(a==='refreshIcons') refreshIcons();
       if(a==='refreshChart') refreshChart();
-      if(a==='copyCA') copyCAText();
     }
 
-    // Copy CA text function
-    function copyCAText() {
-      const textToCopy = 'coming soon';
-      
-      // Create a temporary textarea element
-      const textArea = document.createElement('textarea');
-      textArea.value = textToCopy;
-      textArea.style.position = 'fixed';
-      textArea.style.opacity = '0';
-      textArea.style.left = '-999px';
-      textArea.style.top = '-999px';
-      
-      // Add to DOM, select, copy, then remove
-      document.body.appendChild(textArea);
-      textArea.select();
-      textArea.setSelectionRange(0, 99999); // For mobile devices
-      
-      try {
-        document.execCommand('copy');
-        // Show feedback
-        const btn = document.querySelector('[data-action="copyCA"]');
-        const originalText = btn.textContent;
-        btn.textContent = 'Copied!';
-        btn.style.background = '#00ff00';
-        setTimeout(function() {
-          btn.textContent = originalText;
-          btn.style.background = '';
-        }, 1000);
-      } catch (err) {
-        alert('Copy failed. Text to copy: ' + textToCopy);
-      }
-      
-      // Clean up
-      document.body.removeChild(textArea);
-    }
  
     // Loading status messages
     const loadingMessages = [
@@ -650,12 +625,6 @@
     // ---------- LOADING SCREEN ----------
     window.addEventListener('load', function() {
       const loadingScreen = document.getElementById('loadingScreen');
-      const backgroundSound = document.getElementById('backgroundSound');
-      
-      // Start sound after 3 seconds from page load (including loading screen time)
-      setTimeout(function() {
-        backgroundSound.play();
-      }, 3000);
       
       // Show loading screen for 4 seconds
       setTimeout(function() {
@@ -702,6 +671,80 @@
  
     // Open default active windows in taskbar
     ['loading-window'].forEach(id=> ensureTaskButton(id, document.querySelector('.'+id).dataset.title));
+
+// ---------- COPY ADDRESS FUNCTION ----------
+function copyToClipboard() {
+      const addressElement = document.getElementById('walletAddress');
+      const address = addressElement.textContent;
+      const button = document.querySelector('.copy-btn');
+      
+      if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(address).then(() => {
+          showCopySuccess(button);
+        }).catch(() => {
+          fallbackCopy(address, button);
+        });
+      } else {
+        fallbackCopy(address, button);
+      }
+    }
+
+    function fallbackCopy(text, button) {
+      const textArea = document.createElement('textarea');
+      textArea.value = text;
+      textArea.style.position = 'fixed';
+      textArea.style.left = '-999999px';
+      textArea.style.top = '-999999px';
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+      
+      try {
+        document.execCommand('copy');
+        showCopySuccess(button);
+      } catch (err) {
+        console.error('Copy failed:', err);
+      }
+      
+      document.body.removeChild(textArea);
+    }
+
+    function showCopySuccess(button) {
+      const originalText = button.textContent;
+      
+      button.textContent = 'Copied!';
+      button.style.background = 'linear-gradient(to bottom, #e8f5e8 0%, #d0e8d0 100%)';
+      button.style.color = '#2e7d32';
+      
+      setTimeout(() => {
+        button.textContent = originalText;
+        button.style.background = '';
+        button.style.color = '';
+      }, 2000);
+    }
+
+
   </script>
+
+<!-- Hidden audio element -->
+<audio id="delayedSound" preload="auto">
+    <source src="images/sound.mp4" type="audio/mp4">
+</audio>
+
+<script>
+// Change this value to adjust when sound plays (in milliseconds)
+const DELAY_TIME = 4000; // 4000ms = 4 seconds
+
+window.addEventListener('load', function() {
+    const audio = document.getElementById('delayedSound');
+    
+    setTimeout(function() {
+        audio.play().catch(function(error) {
+            console.log('Audio playback failed (likely due to browser autoplay policy):', error);
+        });
+    }, DELAY_TIME);
+});
+</script>
+
 </body>
 </html>
